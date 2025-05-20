@@ -27,5 +27,5 @@ Token *tokenize_input(const char *input, int *token_count);
 Command *parse_tokens(Token *tokens, int token_count);
 void execute_command_chain(Command *cmd);
 void free_command_chain(Command *cmd);
-
+void print_history();
 #endif
