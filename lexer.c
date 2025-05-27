@@ -15,14 +15,15 @@ Token *tokenize_input(const char *input, int *token_count) {
         if (input[i] == ';') {
             tokens[(*token_count)++] = (Token){TOKEN_SEMICOLON, strdup(";")};
             i++;
-        } 
-        else if (input[i] == '|') {
+        } else if (input[i] == '|') {
             tokens[(*token_count)++] = (Token){TOKEN_PIPE, strdup("|")};
             i++;
-        }
-        else if (input[i] != '\0') {
+        } else if (input[i] == '&') {
+            tokens[(*token_count)++] = (Token){TOKEN_AMPERSAND, strdup("&")};
+            i++;
+        } else if (input[i] != '\0') {
             int start = i;
-            while (i < len && !isspace(input[i]) && input[i] != ';') i++;
+            while (i < len && !isspace(input[i]) && input[i] != ';' && input[i] != '|') i++;
             int word_len = i - start;
             char *word = strndup(&input[start], word_len);
             tokens[(*token_count)++] = (Token){TOKEN_WORD, word};
