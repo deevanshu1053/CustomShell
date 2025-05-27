@@ -3,51 +3,60 @@
 #include <string.h>
 #include "shell.h"
 
+static Command *parse_pipeline(Token *tokens, int *i, int token_count) {
+    Command *head = NULL, *current = NULL;
+    while (*i < token_count && tokens[*i].type != TOKEN_EOF &&
+           tokens[*i].type != TOKEN_SEMICOLON) {
+        Command *cmd = malloc(sizeof(Command));
+        cmd->args = malloc(sizeof(char *) * MAX_TOKENS);
+        cmd->next = NULL;
+        cmd->pipe_to = NULL;
+        cmd->background = 0; // Default
+
+        int argc = 0;
+        while (*i < token_count && tokens[*i].type == TOKEN_WORD) {
+            cmd->args[argc++] = strdup(tokens[*i].value);
+            (*i)++;
+        }
+        cmd->args[argc] = NULL;
+
+        // Check for background '&'
+        if (*i < token_count && tokens[*i].type == TOKEN_AMPERSAND) {
+            cmd->background = 1;
+            (*i)++;
+        }
+
+        if (!head) {
+            head = current = cmd;
+        } else {
+            current->pipe_to = cmd;
+            current = cmd;
+        }
+
+        if (*i < token_count && tokens[*i].type == TOKEN_PIPE) {
+            (*i)++; // skip '|'
+        } else {
+            break;
+        }
+    }
+    return head;
+}
+
 Command *parse_tokens(Token *tokens, int token_count) {
     Command *head = NULL, *current = NULL;
     int i = 0;
 
     while (i < token_count && tokens[i].type != TOKEN_EOF) {
-        Command *cmd = malloc(sizeof(Command));
-        cmd->args = malloc(sizeof(char *) * MAX_TOKENS);
-        cmd->next = NULL;
-        cmd->pipe_to = NULL;
-
-        int argc = 0;
-        while (i < token_count && tokens[i].type == TOKEN_WORD) {
-            cmd->args[argc++] = strdup(tokens[i].value);
-            i++;
-        }
-        cmd->args[argc] = NULL;
-
-        Command *last_pipe = cmd;
-
-        while (i < token_count && tokens[i].type == TOKEN_PIPE) {
-            i++; // skip '|'
-
-            Command *pipe_cmd = malloc(sizeof(Command));
-            pipe_cmd->args = malloc(sizeof(char *) * MAX_TOKENS);
-            pipe_cmd->next = NULL;
-            pipe_cmd->pipe_to = NULL;
-
-            int pargc = 0;
-            while (i < token_count && tokens[i].type == TOKEN_WORD) {
-                pipe_cmd->args[pargc++] = strdup(tokens[i].value);
-                i++;
-            }
-            pipe_cmd->args[pargc] = NULL;
-
-            last_pipe->pipe_to = pipe_cmd;
-            last_pipe = pipe_cmd;
-        }
+        Command *pipeline = parse_pipeline(tokens, &i, token_count);
 
         if (i < token_count && tokens[i].type == TOKEN_SEMICOLON) i++;
 
         if (!head) {
-            head = current = cmd;
+            head = current = pipeline;
         } else {
-            current->next = cmd;
-            current = cmd;
+            current->next = pipeline;
+            // Move to the end of the pipeline
+            while (current->pipe_to) current = current->pipe_to;
         }
     }
 
